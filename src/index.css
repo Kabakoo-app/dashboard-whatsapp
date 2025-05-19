@@ -1,5 +1,10 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap');
+
 :root {
-  font-family: Roboto, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Rubik', 'Open Sans', 'Lato', system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
@@ -7,6 +12,16 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+  
+  /* Custom Properties for Theme Colors */
+  --color-primary: #55415D;
+  --color-primary-light: #C3A5C7;
+  --color-primary-dark: #3A2C40;
+  --color-secondary: #F9D58B;
+  --color-secondary-light: #FCE5B3;
+  --color-secondary-dark: #E6B85A;
+  --color-background: #F8F3EA;
+  --color-card: #FFFFFF;
 }
 
 * {
@@ -25,6 +40,27 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--color-background);
+  transition: background-color 0.3s ease;
+}
+
+/* Indigenous Pattern Background */
+.pattern-bg {
+  position: relative;
+}
+
+.pattern-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(circle at 90% 10%, rgba(195, 165, 199, 0.15) 0%, rgba(195, 165, 199, 0) 40%), 
+                    radial-gradient(circle at 10% 90%, rgba(249, 213, 139, 0.1) 0%, rgba(249, 213, 139, 0) 30%);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  z-index: -1;
 }
 
 a {
