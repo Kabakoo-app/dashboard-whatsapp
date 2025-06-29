@@ -6,7 +6,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  Divider,
   useTheme,
   Chip,
   Avatar,
@@ -26,8 +25,6 @@ import {
   Tooltip, 
   Legend, 
   ResponsiveContainer, 
-  LineChart, 
-  Line,
   AreaChart,
   Area
 } from 'recharts'
@@ -39,18 +36,11 @@ import ThumbUpIcon from '@mui/icons-material/ThumbUp'
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
+import RefreshIcon from '@mui/icons-material/Refresh'
+import CircularProgress from '@mui/material/CircularProgress'
+import Alert from '@mui/material/Alert'
+import { useDashboardData } from '../hooks/useDashboardData'
 
-// Mock data
-const userMetricsData = {
-  totalUsers: 5243,
-  activeUsers: 4128,
-  engagementRate: 78.7,
-  collaborationRate: 80,
-  userGrowth: 12.3,
-  activeGrowth: 8.7,
-  engagementGrowth: -2.4,
-  collaborationGrowth: 5.2
-}
 
 const dropoutData = [
   { name: 'Module 1', value: 5, fill: '#C3A5C7' },
@@ -99,6 +89,7 @@ const COLORS = {
 
 const Dashboard = () => {
   const theme = useTheme()
+  const { data: dashboardData, loading, error, refetch } = useDashboardData()
   
   // Indigenous pattern style for section backgrounds
   const patternBg = {
@@ -155,6 +146,9 @@ const Dashboard = () => {
           <Button 
             variant="contained" 
             color="secondary"
+            onClick={refetch}
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
             sx={{ 
               borderRadius: '8px', 
               textTransform: 'none',
@@ -162,10 +156,30 @@ const Dashboard = () => {
               color: COLORS.primary
             }}
           >
-            New Report
+            {loading ? 'Refreshing...' : 'Refresh Data'}
           </Button>
         </Box>
       </Box>
+      
+      {/* Error Alert */}
+      {error && (
+        <Alert 
+          severity="error" 
+          sx={{ mb: 3 }}
+          action={
+            <Button 
+              color="inherit" 
+              size="small" 
+              onClick={refetch}
+              startIcon={<RefreshIcon />}
+            >
+              Retry
+            </Button>
+          }
+        >
+          Failed to load dashboard data: {error}
+        </Alert>
+      )}
       
       {/* Metrics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -174,9 +188,10 @@ const Dashboard = () => {
             elevation={0}
             sx={{
               p: 3,
+              pb: 3.5,
               display: 'flex',
               flexDirection: 'column',
-              height: 160,
+              height: 180,
               borderRadius: '16px',
               position: 'relative',
               overflow: 'hidden',
@@ -205,7 +220,7 @@ const Dashboard = () => {
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <TrendingUpIcon sx={{ color: COLORS.success, fontSize: '1rem', mr: 0.5 }} />
                 <Typography variant="body2" sx={{ color: COLORS.success, fontWeight: 600 }}>
-                  {userMetricsData.userGrowth}%
+                  12.3%
                 </Typography>
               </Box>
             </Box>
@@ -217,7 +232,11 @@ const Dashboard = () => {
                 color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
               }}
             >
-              {userMetricsData.totalUsers.toLocaleString()}
+              {loading ? (
+                <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
+              ) : (
+                dashboardData?.total_registered_users?.toLocaleString() || '0'
+              )}
             </Typography>
             <Typography 
               variant="subtitle2" 
@@ -236,9 +255,10 @@ const Dashboard = () => {
             elevation={0}
             sx={{
               p: 3,
+              pb: 3.5,
               display: 'flex',
               flexDirection: 'column',
-              height: 160,
+              height: 180,
               borderRadius: '16px',
               position: 'relative',
               overflow: 'hidden',
@@ -267,7 +287,7 @@ const Dashboard = () => {
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <TrendingUpIcon sx={{ color: COLORS.success, fontSize: '1rem', mr: 0.5 }} />
                 <Typography variant="body2" sx={{ color: COLORS.success, fontWeight: 600 }}>
-                  {userMetricsData.activeGrowth}%
+                  8.7%
                 </Typography>
               </Box>
             </Box>
@@ -279,7 +299,11 @@ const Dashboard = () => {
                 color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
               }}
             >
-              {userMetricsData.activeUsers.toLocaleString()}
+              {loading ? (
+                <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
+              ) : (
+                dashboardData?.active_users?.toLocaleString() || '0'
+              )}
             </Typography>
             <Typography 
               variant="subtitle2" 
@@ -298,9 +322,10 @@ const Dashboard = () => {
             elevation={0}
             sx={{
               p: 3,
+              pb: 3.5,
               display: 'flex',
               flexDirection: 'column',
-              height: 160,
+              height: 180,
               borderRadius: '16px',
               position: 'relative',
               overflow: 'hidden',
@@ -329,7 +354,7 @@ const Dashboard = () => {
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <TrendingDownIcon sx={{ color: COLORS.error, fontSize: '1rem', mr: 0.5 }} />
                 <Typography variant="body2" sx={{ color: COLORS.error, fontWeight: 600 }}>
-                  {Math.abs(userMetricsData.engagementGrowth)}%
+                  2.4%
                 </Typography>
               </Box>
             </Box>
@@ -341,7 +366,11 @@ const Dashboard = () => {
                 color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
               }}
             >
-              {userMetricsData.engagementRate}%
+              {loading ? (
+                <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
+              ) : (
+                `${(dashboardData?.message_response_rate || 0).toFixed(1)}%`
+              )}
             </Typography>
             <Typography 
               variant="subtitle2" 
@@ -360,9 +389,10 @@ const Dashboard = () => {
             elevation={0}
             sx={{
               p: 3,
+              pb: 3.5,
               display: 'flex',
               flexDirection: 'column',
-              height: 160,
+              height: 180,
               borderRadius: '16px',
               position: 'relative',
               overflow: 'hidden',
@@ -391,7 +421,7 @@ const Dashboard = () => {
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <TrendingUpIcon sx={{ color: COLORS.success, fontSize: '1rem', mr: 0.5 }} />
                 <Typography variant="body2" sx={{ color: COLORS.success, fontWeight: 600 }}>
-                  {userMetricsData.collaborationGrowth}%
+                  5.2%
                 </Typography>
               </Box>
             </Box>
@@ -403,7 +433,11 @@ const Dashboard = () => {
                 color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
               }}
             >
-              {userMetricsData.collaborationRate}%
+              {loading ? (
+                <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
+              ) : (
+                `${(dashboardData?.group_collaboration_success || 0).toFixed(1)}%`
+              )}
             </Typography>
             <Typography 
               variant="subtitle2" 
