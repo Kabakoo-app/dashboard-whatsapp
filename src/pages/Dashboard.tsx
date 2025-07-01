@@ -39,7 +39,13 @@ import MoreVertIcon from '@mui/icons-material/MoreVert'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import CircularProgress from '@mui/material/CircularProgress'
 import Alert from '@mui/material/Alert'
+import { TextField } from '@mui/material'
+import { useState } from 'react'
 import { useDashboardData } from '../hooks/useDashboardData'
+import ChatIcon from '@mui/icons-material/Chat'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import PersonAddIcon from '@mui/icons-material/PersonAdd'
 
 
 const dropoutData = [
@@ -89,7 +95,8 @@ const COLORS = {
 
 const Dashboard = () => {
   const theme = useTheme()
-  const { data: dashboardData, loading, error, refetch } = useDashboardData()
+  const [selectedDate, setSelectedDate] = useState<string>('')
+  const { data: dashboardData, loading, error, refetch } = useDashboardData(selectedDate)
   
   // Indigenous pattern style for section backgrounds
   const patternBg = {
@@ -124,13 +131,47 @@ const Dashboard = () => {
             sx={{ 
               color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
               opacity: 0.7,
-              maxWidth: 600
+              maxWidth: 600,
+              mb: 1
             }}
           >
             Monitor and analyze learner engagement, module progress, and collaboration rates for your WhatsApp-based courses.
           </Typography>
+          {dashboardData?.kpi?.metric_date && (
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: theme.palette.mode === 'dark' ? COLORS.secondary : COLORS.warning,
+                fontWeight: 600,
+                maxWidth: 600
+              }}
+            >
+              📊 Showing data for: {new Date(dashboardData.kpi.metric_date).toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </Typography>
+          )}
         </Box>
-        <Box sx={{ display: 'flex', gap: 2, mt: { xs: 2, md: 0 } }}>
+        <Box sx={{ display: 'flex', gap: 2, mt: { xs: 2, md: 0 }, alignItems: 'center' }}>
+          <TextField
+            type="date"
+            size="small"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            sx={{ 
+              minWidth: 140,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px',
+              }
+            }}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            label="Select Date"
+          />
           <Button 
             variant="outlined" 
             color="primary"
@@ -146,7 +187,7 @@ const Dashboard = () => {
           <Button 
             variant="contained" 
             color="secondary"
-            onClick={refetch}
+            onClick={() => refetch(selectedDate)}
             disabled={loading}
             startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
             sx={{ 
@@ -235,7 +276,7 @@ const Dashboard = () => {
               {loading ? (
                 <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
               ) : (
-                dashboardData?.total_registered_users?.toLocaleString() || '0'
+                dashboardData?.kpi?.total_registered_users?.toLocaleString() || '0'
               )}
             </Typography>
             <Typography 
@@ -302,7 +343,7 @@ const Dashboard = () => {
               {loading ? (
                 <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
               ) : (
-                dashboardData?.active_users?.toLocaleString() || '0'
+                dashboardData?.kpi?.active_users_30d?.toLocaleString() || '0'
               )}
             </Typography>
             <Typography 
@@ -369,7 +410,7 @@ const Dashboard = () => {
               {loading ? (
                 <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
               ) : (
-                `${(dashboardData?.message_response_rate || 0).toFixed(1)}%`
+                `${((dashboardData?.kpi?.ai_response_rate || dashboardData?.kpi?.avg_ai_response_rate || 0) * 100).toFixed(1)}%`
               )}
             </Typography>
             <Typography 
@@ -379,7 +420,7 @@ const Dashboard = () => {
                 opacity: 0.7
               }}
             >
-              Message Response Rate
+              AI Response Rate
             </Typography>
           </Paper>
         </Grid>
@@ -436,7 +477,7 @@ const Dashboard = () => {
               {loading ? (
                 <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
               ) : (
-                `${(dashboardData?.group_collaboration_success || 0).toFixed(1)}%`
+                dashboardData?.kpi?.dau?.toLocaleString() || '0'
               )}
             </Typography>
             <Typography 
@@ -446,7 +487,254 @@ const Dashboard = () => {
                 opacity: 0.7
               }}
             >
-              Group Collaboration Success
+              Daily Active Users
+            </Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+      
+      {/* Additional Metrics Row */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              pb: 3.5,
+              display: 'flex',
+              flexDirection: 'column',
+              height: 140,
+              borderRadius: '16px',
+              position: 'relative',
+              overflow: 'hidden',
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '4px',
+                backgroundColor: COLORS.info,
+                opacity: 0.7
+              }
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+              <Avatar
+                sx={{ 
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.15)', 
+                  color: theme.palette.mode === 'dark' ? COLORS.info : COLORS.info
+                }}
+              >
+                <PersonAddIcon />
+              </Avatar>
+            </Box>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700, 
+                mb: 1, 
+                color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
+              }}
+            >
+              {loading ? (
+                <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
+              ) : (
+                dashboardData?.kpi?.new_users?.toLocaleString() || '0'
+              )}
+            </Typography>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
+                opacity: 0.7
+              }}
+            >
+              New Users Today
+            </Typography>
+          </Paper>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              pb: 3.5,
+              display: 'flex',
+              flexDirection: 'column',
+              height: 140,
+              borderRadius: '16px',
+              position: 'relative',
+              overflow: 'hidden',
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '4px',
+                backgroundColor: COLORS.warning,
+                opacity: 0.7
+              }
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+              <Avatar
+                sx={{ 
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.15)', 
+                  color: theme.palette.mode === 'dark' ? COLORS.warning : COLORS.warning
+                }}
+              >
+                <ChatIcon />
+              </Avatar>
+            </Box>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700, 
+                mb: 1, 
+                color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
+              }}
+            >
+              {loading ? (
+                <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
+              ) : (
+                dashboardData?.kpi?.total_wh_messages?.toLocaleString() || '0'
+              )}
+            </Typography>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
+                opacity: 0.7
+              }}
+            >
+              Total WhatsApp Messages
+            </Typography>
+          </Paper>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              pb: 3.5,
+              display: 'flex',
+              flexDirection: 'column',
+              height: 140,
+              borderRadius: '16px',
+              position: 'relative',
+              overflow: 'hidden',
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '4px',
+                backgroundColor: COLORS.success,
+                opacity: 0.7
+              }
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+              <Avatar
+                sx={{ 
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(76, 175, 80, 0.15)', 
+                  color: theme.palette.mode === 'dark' ? COLORS.success : COLORS.success
+                }}
+              >
+                <VisibilityIcon />
+              </Avatar>
+            </Box>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700, 
+                mb: 1, 
+                color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
+              }}
+            >
+              {loading ? (
+                <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
+              ) : (
+                dashboardData?.visit?.total_visits?.toLocaleString() || '0'
+              )}
+            </Typography>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
+                opacity: 0.7
+              }}
+            >
+              Dashboard Visits
+            </Typography>
+          </Paper>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              pb: 3.5,
+              display: 'flex',
+              flexDirection: 'column',
+              height: 140,
+              borderRadius: '16px',
+              position: 'relative',
+              overflow: 'hidden',
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '4px',
+                backgroundColor: COLORS.lilac,
+                opacity: 0.7
+              }
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+              <Avatar
+                sx={{ 
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.2)' : 'rgba(195, 165, 199, 0.15)', 
+                  color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary
+                }}
+              >
+                <AccessTimeIcon />
+              </Avatar>
+            </Box>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700, 
+                mb: 1, 
+                color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
+              }}
+            >
+              {loading ? (
+                <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
+              ) : (
+                dashboardData?.visit?.avg_duration_minutes ? `${dashboardData.visit.avg_duration_minutes.toFixed(0)}m` : 'N/A'
+              )}
+            </Typography>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
+                opacity: 0.7
+              }}
+            >
+              Avg. Session Duration
             </Typography>
           </Paper>
         </Grid>

@@ -5,19 +5,19 @@ export interface UseDashboardDataReturn {
   data: DashboardData | null
   loading: boolean
   error: string | null
-  refetch: () => void
+  refetch: (date?: string) => void
 }
 
-export const useDashboardData = (): UseDashboardDataReturn => {
+export const useDashboardData = (initialDate?: string): UseDashboardDataReturn => {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchData = async () => {
+  const fetchData = async (date?: string) => {
     try {
       setLoading(true)
       setError(null)
-      const dashboardData = await fetchDashboardAnalytics()
+      const dashboardData = await fetchDashboardAnalytics(date)
       setData(dashboardData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -27,11 +27,11 @@ export const useDashboardData = (): UseDashboardDataReturn => {
   }
 
   useEffect(() => {
-    fetchData()
-  }, [])
+    fetchData(initialDate)
+  }, [initialDate])
 
-  const refetch = () => {
-    fetchData()
+  const refetch = (date?: string) => {
+    fetchData(date)
   }
 
   return { data, loading, error, refetch }
