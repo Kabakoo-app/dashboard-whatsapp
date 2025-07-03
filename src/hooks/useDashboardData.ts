@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { fetchDashboardAnalytics, type DashboardData } from '../services/api'
+import { fetchDashboardAnalytics, fetchExtendedDashboardAnalytics, type DashboardData } from '../services/api'
 
 export interface UseDashboardDataReturn {
   data: DashboardData | null
   loading: boolean
   error: string | null
   refetch: (date?: string) => void
+  refetchExtended: (date?: string, startDate?: string, endDate?: string) => void
 }
 
 export const useDashboardData = (initialDate?: string): UseDashboardDataReturn => {
@@ -27,12 +28,29 @@ export const useDashboardData = (initialDate?: string): UseDashboardDataReturn =
   }
 
   useEffect(() => {
-    fetchData(initialDate)
+    fetchExtendedData(initialDate)
   }, [initialDate])
+
+  const fetchExtendedData = async (date?: string, startDate?: string, endDate?: string) => {
+    try {
+      setLoading(true)
+      setError(null)
+      const dashboardData = await fetchExtendedDashboardAnalytics(date, startDate, endDate)
+      setData(dashboardData)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const refetch = (date?: string) => {
     fetchData(date)
   }
 
-  return { data, loading, error, refetch }
+  const refetchExtended = (date?: string, startDate?: string, endDate?: string) => {
+    fetchExtendedData(date, startDate, endDate)
+  }
+
+  return { data, loading, error, refetch, refetchExtended }
 }

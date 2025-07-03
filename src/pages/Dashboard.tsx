@@ -40,12 +40,20 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import CircularProgress from '@mui/material/CircularProgress'
 import Alert from '@mui/material/Alert'
 import { TextField } from '@mui/material'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDashboardData } from '../hooks/useDashboardData'
+import { fetchWorkshopMetrics, fetchVideoMetrics } from '../services/api'
 import ChatIcon from '@mui/icons-material/Chat'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import PersonAddIcon from '@mui/icons-material/PersonAdd'
+import VideoLibraryIcon from '@mui/icons-material/VideoLibrary'
+import EventIcon from '@mui/icons-material/Event'
+import PlayCircleIcon from '@mui/icons-material/PlayCircle'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import TouchAppIcon from '@mui/icons-material/TouchApp'
+import VideoCallIcon from '@mui/icons-material/VideoCall'
+import ThumbUpAltIcon from '@mui/icons-material/ThumbUpAlt'
 
 
 const dropoutData = [
@@ -56,14 +64,7 @@ const dropoutData = [
   { name: 'Module 5', value: 22, fill: '#8A6E8D' },
 ]
 
-const engagementData = [
-  { name: 'Week 1', messages: 8500, replies: 6200 },
-  { name: 'Week 2', messages: 9200, replies: 6800 },
-  { name: 'Week 3', messages: 9800, replies: 7500 },
-  { name: 'Week 4', messages: 10500, replies: 8200 },
-  { name: 'Week 5', messages: 11200, replies: 9000 },
-  { name: 'Week 6', messages: 12000, replies: 9600 },
-]
+// This will be replaced with real data from API in the component
 
 // Top performing users
 const topUsers = [
@@ -93,10 +94,79 @@ const COLORS = {
   chartColors: ['#55415D', '#C3A5C7', '#F9D58B', '#E6B85A', '#8A6E8D']
 }
 
+// Utility function to calculate trend from historical data
+const calculateTrend = (currentValue: number, historicalData: any[], fieldName: string): { percentage: number, isPositive: boolean } => {
+  if (!historicalData || historicalData.length === 0) return { percentage: 0, isPositive: true }
+  
+  // Get the most recent historical value (excluding current)
+  const previousValue = historicalData[0]?.[fieldName]
+  if (previousValue === null || previousValue === undefined || previousValue === 0) {
+    return { percentage: 0, isPositive: true }
+  }
+  
+  const difference = currentValue - previousValue
+  const percentage = Math.abs((difference / previousValue) * 100)
+  
+  return {
+    percentage: Math.round(percentage * 10) / 10, // Round to 1 decimal
+    isPositive: difference >= 0
+  }
+}
+
+// Utility function to get top clicks
+const getTopClicks = (clickData: Record<string, number>, limit: number = 5) => {
+  return Object.entries(clickData)
+    .sort(([,a], [,b]) => b - a)
+    .slice(0, limit)
+    .map(([name, value]) => ({ name, value }))
+}
+
 const Dashboard = () => {
   const theme = useTheme()
   const [selectedDate, setSelectedDate] = useState<string>('')
-  const { data: dashboardData, loading, error, refetch } = useDashboardData(selectedDate)
+  const [showAllCards, setShowAllCards] = useState(false)
+  const [workshopDate, setWorkshopDate] = useState<string>('')
+  const [videoStartDate, setVideoStartDate] = useState<string>('')
+  const [videoEndDate, setVideoEndDate] = useState<string>('')
+  const [workshopData, setWorkshopData] = useState<any>(null)
+  const [videoData, setVideoData] = useState<any>(null)
+  const [workshopLoading, setWorkshopLoading] = useState(false)
+  const [videoLoading, setVideoLoading] = useState(false)
+  const { data: dashboardData, loading, error, refetchExtended } = useDashboardData(selectedDate)
+  
+  // Fetch workshop data when workshop date changes
+  useEffect(() => {
+    const fetchWorkshopData = async () => {
+      try {
+        setWorkshopLoading(true)
+        const data = await fetchWorkshopMetrics(workshopDate)
+        setWorkshopData(data)
+      } catch (error) {
+        console.error('Error fetching workshop data:', error)
+      } finally {
+        setWorkshopLoading(false)
+      }
+    }
+    
+    fetchWorkshopData()
+  }, [workshopDate])
+  
+  // Fetch video data when video dates change
+  useEffect(() => {
+    const fetchVideoData = async () => {
+      try {
+        setVideoLoading(true)
+        const data = await fetchVideoMetrics(videoStartDate, videoEndDate)
+        setVideoData(data)
+      } catch (error) {
+        console.error('Error fetching video data:', error)
+      } finally {
+        setVideoLoading(false)
+      }
+    }
+    
+    fetchVideoData()
+  }, [videoStartDate, videoEndDate])
   
   // Indigenous pattern style for section backgrounds
   const patternBg = {
@@ -155,7 +225,7 @@ const Dashboard = () => {
             </Typography>
           )}
         </Box>
-        <Box sx={{ display: 'flex', gap: 2, mt: { xs: 2, md: 0 }, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 2, mt: { xs: 2, md: 0 }, alignItems: 'center', flexWrap: 'wrap' }}>
           <TextField
             type="date"
             size="small"
@@ -170,7 +240,7 @@ const Dashboard = () => {
             InputLabelProps={{
               shrink: true,
             }}
-            label="Select Date"
+            label="General Date Filter"
           />
           <Button 
             variant="outlined" 
@@ -187,7 +257,7 @@ const Dashboard = () => {
           <Button 
             variant="contained" 
             color="secondary"
-            onClick={() => refetch(selectedDate)}
+            onClick={() => refetchExtended(selectedDate)}
             disabled={loading}
             startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
             sx={{ 
@@ -211,7 +281,7 @@ const Dashboard = () => {
             <Button 
               color="inherit" 
               size="small" 
-              onClick={refetch}
+              onClick={() => refetchExtended()}
               startIcon={<RefreshIcon />}
             >
               Retry
@@ -223,525 +293,592 @@ const Dashboard = () => {
       )}
       
       {/* Metrics Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              pb: 3.5,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 180,
-              borderRadius: '16px',
-              position: 'relative',
-              overflow: 'hidden',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '4px',
-                backgroundColor: COLORS.primary,
-                opacity: 0.7
-              }
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Avatar
-                sx={{ 
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.2)' : 'rgba(195, 165, 199, 0.15)', 
-                  color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary
-                }}
-              >
-                <GroupIcon />
-              </Avatar>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <TrendingUpIcon sx={{ color: COLORS.success, fontSize: '1rem', mr: 0.5 }} />
-                <Typography variant="body2" sx={{ color: COLORS.success, fontWeight: 600 }}>
-                  12.3%
-                </Typography>
-              </Box>
-            </Box>
-            <Typography 
-              variant="h3" 
-              sx={{ 
-                fontWeight: 700, 
-                mb: 1, 
-                color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
-              }}
-            >
-              {loading ? (
-                <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
-              ) : (
-                dashboardData?.kpi?.total_registered_users?.toLocaleString() || '0'
-              )}
-            </Typography>
-            <Typography 
-              variant="subtitle2" 
-              sx={{ 
-                color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
-                opacity: 0.7
-              }}
-            >
-              Total Registered Users
-            </Typography>
-          </Paper>
-        </Grid>
+      {(() => {
+        // Calculate trends using historical data
+        const kpiHistory = dashboardData?.kpiHistory || []
+        const visitHistory = dashboardData?.visitHistory || []
         
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              pb: 3.5,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 180,
-              borderRadius: '16px',
-              position: 'relative',
-              overflow: 'hidden',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '4px',
-                backgroundColor: COLORS.lilac,
-                opacity: 0.7
-              }
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Avatar
-                sx={{ 
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.2)' : 'rgba(195, 165, 199, 0.15)', 
-                  color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary
-                }}
-              >
-                <PersonIcon />
-              </Avatar>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <TrendingUpIcon sx={{ color: COLORS.success, fontSize: '1rem', mr: 0.5 }} />
-                <Typography variant="body2" sx={{ color: COLORS.success, fontWeight: 600 }}>
-                  8.7%
-                </Typography>
-              </Box>
-            </Box>
-            <Typography 
-              variant="h3" 
-              sx={{ 
-                fontWeight: 700, 
-                mb: 1, 
-                color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
-              }}
-            >
-              {loading ? (
-                <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
-              ) : (
-                dashboardData?.kpi?.active_users_30d?.toLocaleString() || '0'
-              )}
-            </Typography>
-            <Typography 
-              variant="subtitle2" 
-              sx={{ 
-                color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
-                opacity: 0.7
-              }}
-            >
-              Active Users (30 days)
-            </Typography>
-          </Paper>
-        </Grid>
+        const cardsData = [
+          // Main KPI Cards
+          {
+            icon: <GroupIcon />,
+            trend: dashboardData?.kpi ? calculateTrend(dashboardData.kpi.total_registered_users, kpiHistory, 'total_registered_users') : null,
+            value: loading ? <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} /> : dashboardData?.kpi?.total_registered_users?.toLocaleString() || '0',
+            label: 'Total Registered Users',
+            color: COLORS.primary
+          },
+          {
+            icon: <PersonIcon />,
+            trend: dashboardData?.kpi ? calculateTrend(dashboardData.kpi.active_users_30d, kpiHistory, 'active_users_30d') : null,
+            value: loading ? <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} /> : dashboardData?.kpi?.active_users_30d?.toLocaleString() || '0',
+            label: 'Active Users (30 days)',
+            color: COLORS.lilac
+          },
+          {
+            icon: <ThumbUpIcon />,
+            trend: dashboardData?.kpi ? calculateTrend((dashboardData.kpi.ai_response_rate || dashboardData.kpi.avg_ai_response_rate || 0) * 100, kpiHistory, 'ai_response_rate') : null,
+            value: loading ? <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} /> : `${((dashboardData?.kpi?.ai_response_rate || dashboardData?.kpi?.avg_ai_response_rate || 0) * 100).toFixed(1)}%`,
+            label: 'AI Response Rate',
+            color: COLORS.secondary
+          },
+          {
+            icon: <PeopleAltIcon />,
+            trend: dashboardData?.kpi ? calculateTrend(dashboardData.kpi.dau, kpiHistory, 'dau') : null,
+            value: loading ? <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} /> : dashboardData?.kpi?.dau?.toLocaleString() || '0',
+            label: 'Daily Active Users',
+            color: COLORS.primary
+          },
+          
+          // Additional Cards Row 1
+          {
+            icon: <PersonAddIcon />,
+            trend: dashboardData?.kpi ? calculateTrend(dashboardData.kpi.new_users, kpiHistory, 'new_users') : null,
+            value: loading ? <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} /> : dashboardData?.kpi?.new_users?.toLocaleString() || '0',
+            label: 'New Users Today',
+            color: COLORS.info
+          },
+          {
+            icon: <ChatIcon />,
+            trend: dashboardData?.kpi ? calculateTrend(dashboardData.kpi.total_wh_messages, kpiHistory, 'total_wh_messages') : null,
+            value: loading ? <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} /> : dashboardData?.kpi?.total_wh_messages?.toLocaleString() || '0',
+            label: 'Total WhatsApp Messages',
+            color: COLORS.warning
+          },
+          {
+            icon: <VisibilityIcon />,
+            trend: dashboardData?.visit ? calculateTrend(dashboardData.visit.total_visits, visitHistory, 'total_visits') : null,
+            value: loading ? <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} /> : dashboardData?.visit?.total_visits?.toLocaleString() || '0',
+            label: 'Total Visits',
+            color: COLORS.success
+          },
+          {
+            icon: <AccessTimeIcon />,
+            trend: dashboardData?.visit && dashboardData.visit.avg_duration_minutes ? calculateTrend(dashboardData.visit.avg_duration_minutes, visitHistory, 'avg_duration_minutes') : null,
+            value: loading ? <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} /> : dashboardData?.visit?.avg_duration_minutes ? `${dashboardData.visit.avg_duration_minutes.toFixed(0)}m` : 'N/A',
+            label: 'Avg. Session Duration',
+            color: COLORS.lilac
+          },
+          
+          // Keep only essential summary cards
+          {
+            icon: <VideoLibraryIcon />,
+            trend: null,
+            value: loading ? <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} /> : dashboardData?.video?.total_videos_sent?.toLocaleString() || '0',
+            label: 'Videos Sent',
+            color: COLORS.success
+          },
+          {
+            icon: <EventIcon />,
+            trend: null,
+            value: loading ? <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} /> : dashboardData?.workshop?.total_workshop_attendees?.toLocaleString() || '0',
+            label: 'Workshop Attendees',
+            color: COLORS.lilac
+          },
+          {
+            icon: <TouchAppIcon />,
+            trend: null,
+            value: loading ? <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} /> : dashboardData?.click?.clicks ? Object.values(dashboardData.click.clicks).reduce((a, b) => a + b, 0).toLocaleString() : '0',
+            label: 'Total Clicks',
+            color: COLORS.info
+          },
+          {
+            icon: <CheckCircleIcon />,
+            trend: null,
+            value: loading ? <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} /> : dashboardData?.video?.total_validations_sent?.toLocaleString() || '0',
+            label: 'Video Validations',
+            color: COLORS.secondary
+          }
+        ]
         
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              pb: 3.5,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 180,
-              borderRadius: '16px',
-              position: 'relative',
-              overflow: 'hidden',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '4px',
-                backgroundColor: COLORS.secondary,
-                opacity: 0.7
-              }
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Avatar
-                sx={{ 
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(249, 213, 139, 0.2)' : 'rgba(249, 213, 139, 0.2)', 
-                  color: theme.palette.mode === 'dark' ? COLORS.secondary : COLORS.primary
-                }}
-              >
-                <ThumbUpIcon />
-              </Avatar>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <TrendingDownIcon sx={{ color: COLORS.error, fontSize: '1rem', mr: 0.5 }} />
-                <Typography variant="body2" sx={{ color: COLORS.error, fontWeight: 600 }}>
-                  2.4%
-                </Typography>
-              </Box>
-            </Box>
-            <Typography 
-              variant="h3" 
-              sx={{ 
-                fontWeight: 700, 
-                mb: 1, 
-                color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
-              }}
-            >
-              {loading ? (
-                <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
-              ) : (
-                `${((dashboardData?.kpi?.ai_response_rate || dashboardData?.kpi?.avg_ai_response_rate || 0) * 100).toFixed(1)}%`
-              )}
-            </Typography>
-            <Typography 
-              variant="subtitle2" 
-              sx={{ 
-                color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
-                opacity: 0.7
-              }}
-            >
-              AI Response Rate
-            </Typography>
-          </Paper>
-        </Grid>
+        const mainCards = cardsData.slice(0, 4)
+        const additionalRow1 = cardsData.slice(4, 8)
+        const additionalRow2 = cardsData.slice(8, 12)
         
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              pb: 3.5,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 180,
-              borderRadius: '16px',
-              position: 'relative',
-              overflow: 'hidden',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '4px',
-                backgroundColor: COLORS.primary,
-                opacity: 0.7
-              }
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Avatar
-                sx={{ 
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.2)' : 'rgba(195, 165, 199, 0.15)', 
-                  color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary
-                }}
-              >
-                <PeopleAltIcon />
-              </Avatar>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <TrendingUpIcon sx={{ color: COLORS.success, fontSize: '1rem', mr: 0.5 }} />
-                <Typography variant="body2" sx={{ color: COLORS.success, fontWeight: 600 }}>
-                  5.2%
-                </Typography>
-              </Box>
-            </Box>
-            <Typography 
-              variant="h3" 
-              sx={{ 
-                fontWeight: 700, 
-                mb: 1, 
-                color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
-              }}
-            >
-              {loading ? (
-                <CircularProgress size={24} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
-              ) : (
-                dashboardData?.kpi?.dau?.toLocaleString() || '0'
-              )}
-            </Typography>
-            <Typography 
-              variant="subtitle2" 
-              sx={{ 
-                color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
-                opacity: 0.7
-              }}
-            >
-              Daily Active Users
-            </Typography>
-          </Paper>
-        </Grid>
-      </Grid>
+        const renderCards = (cards, rowKey) => (
+          <Grid container spacing={3} sx={{ mb: 4 }} key={rowKey}>
+            {cards.map((card, index) => (
+              <Grid item key={index} xs={3}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 3,
+                    pb: 3.5,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    width: '100%',
+                    height: 180,
+                    borderRadius: '16px',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '4px',
+                      backgroundColor: card.color,
+                      opacity: 0.7
+                    }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                    <Avatar
+                      sx={{
+                        bgcolor: `${card.color}33`,
+                        color: card.color
+                      }}
+                    >
+                      {card.icon}
+                    </Avatar>
+                    {card.trend && card.trend.percentage > 0 && (
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {card.trend.isPositive ? (
+                          <TrendingUpIcon sx={{ color: COLORS.success, fontSize: '1rem', mr: 0.5 }} />
+                        ) : (
+                          <TrendingDownIcon sx={{ color: COLORS.error, fontSize: '1rem', mr: 0.5 }} />
+                        )}
+                        <Typography variant="body2" sx={{ 
+                          color: card.trend.isPositive ? COLORS.success : COLORS.error, 
+                          fontWeight: 600 
+                        }}>
+                          {card.trend.percentage.toFixed(1)}%
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                  <Typography variant={rowKey === 'main' ? 'h3' : 'h4'} sx={{
+                    fontWeight: 700,
+                    mb: 1,
+                    color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary
+                  }}>
+                    {card.value}
+                  </Typography>
+                  <Typography variant="body2" sx={{
+                    color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
+                    opacity: 0.7
+                  }}>
+                    {card.label}
+                  </Typography>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        )
+        
+        return (
+          <>
+            {renderCards(mainCards, 'main')}
+            {showAllCards && renderCards(additionalRow1, 'additional1')}
+            {showAllCards && renderCards(additionalRow2, 'additional2')}
+          </>
+        )
+      })()}
       
-      {/* Additional Metrics Row */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              pb: 3.5,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 140,
-              borderRadius: '16px',
-              position: 'relative',
-              overflow: 'hidden',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '4px',
-                backgroundColor: COLORS.info,
-                opacity: 0.7
-              }
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Avatar
-                sx={{ 
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.15)', 
-                  color: theme.palette.mode === 'dark' ? COLORS.info : COLORS.info
-                }}
-              >
-                <PersonAddIcon />
-              </Avatar>
-            </Box>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 700, 
-                mb: 1, 
-                color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
-              }}
-            >
-              {loading ? (
-                <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
-              ) : (
-                dashboardData?.kpi?.new_users?.toLocaleString() || '0'
-              )}
-            </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
-                opacity: 0.7
-              }}
-            >
-              New Users Today
-            </Typography>
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              pb: 3.5,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 140,
-              borderRadius: '16px',
-              position: 'relative',
-              overflow: 'hidden',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '4px',
-                backgroundColor: COLORS.warning,
-                opacity: 0.7
-              }
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Avatar
-                sx={{ 
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.15)', 
-                  color: theme.palette.mode === 'dark' ? COLORS.warning : COLORS.warning
-                }}
-              >
-                <ChatIcon />
-              </Avatar>
-            </Box>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 700, 
-                mb: 1, 
-                color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
-              }}
-            >
-              {loading ? (
-                <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
-              ) : (
-                dashboardData?.kpi?.total_wh_messages?.toLocaleString() || '0'
-              )}
-            </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
-                opacity: 0.7
-              }}
-            >
-              Total WhatsApp Messages
-            </Typography>
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              pb: 3.5,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 140,
-              borderRadius: '16px',
-              position: 'relative',
-              overflow: 'hidden',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '4px',
-                backgroundColor: COLORS.success,
-                opacity: 0.7
-              }
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Avatar
-                sx={{ 
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(76, 175, 80, 0.15)', 
-                  color: theme.palette.mode === 'dark' ? COLORS.success : COLORS.success
-                }}
-              >
-                <VisibilityIcon />
-              </Avatar>
-            </Box>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 700, 
-                mb: 1, 
-                color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
-              }}
-            >
-              {loading ? (
-                <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
-              ) : (
-                dashboardData?.visit?.total_visits?.toLocaleString() || '0'
-              )}
-            </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
-                opacity: 0.7
-              }}
-            >
-              Dashboard Visits
-            </Typography>
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              pb: 3.5,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 140,
-              borderRadius: '16px',
-              position: 'relative',
-              overflow: 'hidden',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '4px',
-                backgroundColor: COLORS.lilac,
-                opacity: 0.7
-              }
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Avatar
-                sx={{ 
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.2)' : 'rgba(195, 165, 199, 0.15)', 
-                  color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary
-                }}
-              >
-                <AccessTimeIcon />
-              </Avatar>
-            </Box>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 700, 
-                mb: 1, 
-                color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
-              }}
-            >
-              {loading ? (
-                <CircularProgress size={20} sx={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }} />
-              ) : (
-                dashboardData?.visit?.avg_duration_minutes ? `${dashboardData.visit.avg_duration_minutes.toFixed(0)}m` : 'N/A'
-              )}
-            </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
-                opacity: 0.7
-              }}
-            >
-              Avg. Session Duration
-            </Typography>
-          </Paper>
-        </Grid>
-      </Grid>
+      {/* Show More/Less Button */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={() => setShowAllCards(!showAllCards)}
+          sx={{
+            borderRadius: '8px',
+            textTransform: 'none',
+            fontWeight: 600,
+            px: 3
+          }}
+        >
+{showAllCards ? 'Show Less' : 'Show All Metrics'}
+        </Button>
+      </Box>
       
       {/* Charts Section */}
       <Grid container spacing={3}>
+        {/* Workshop Progression Chart */}
+        <Grid item xs={12} md={6}>
+          <Card 
+            elevation={0} 
+            sx={{ 
+              p: 1,
+              borderRadius: '16px',
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
+              ...patternBg
+            }}
+          >
+            <CardHeader 
+              title={
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
+                    }}
+                  >
+                    Workshop Progression
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <TextField
+                      type="date"
+                      size="small"
+                      value={workshopDate}
+                      onChange={(e) => setWorkshopDate(e.target.value)}
+                      sx={{ 
+                        width: 140,
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px',
+                          height: '32px'
+                        }
+                      }}
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
+                      placeholder="Workshop Date"
+                    />
+                    <IconButton size="small">
+                      <EventIcon />
+                    </IconButton>
+                  </Box>
+                </Box>
+              }
+              sx={{ pb: 0 }}
+            />
+            <CardContent>
+              {workshopLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+                  <CircularProgress size={40} sx={{ color: COLORS.primary }} />
+                </Box>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart
+                    data={(() => {
+                      const dataSource = workshopData || dashboardData
+                      if (!dataSource?.workshopHistory && !dataSource?.history) {
+                        return [{ name: 'No Data', attendees: 0, workshops: 0, unique: 0 }]
+                      }
+                      
+                      const historyData = dataSource.history || dataSource.workshopHistory || []
+                      return historyData
+                        .slice(0, 10)
+                        .reverse()
+                        .map((item) => ({
+                          name: new Date(item.metric_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                          attendees: item.total_workshop_attendees || 0,
+                          workshops: item.nb_workshop || 0,
+                          unique: item.unique_workshop_attendees || 0
+                        }))
+                    })()}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(85, 65, 93, 0.1)'} />
+                    <XAxis 
+                      dataKey="name" 
+                      stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
+                      tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
+                    />
+                    <YAxis 
+                      stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
+                      tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: theme.palette.mode === 'dark' ? '#312A3A' : '#FFFFFF',
+                        borderColor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.2)' : 'rgba(85, 65, 93, 0.2)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+                      }}
+                      labelStyle={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary, fontWeight: 600 }}
+                    />
+                    <Legend />
+                    <Bar 
+                      dataKey="attendees" 
+                      fill={COLORS.lilac} 
+                      name="Total Attendees"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar 
+                      dataKey="unique" 
+                      fill={COLORS.secondary} 
+                      name="Unique Attendees"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        {/* Video Progression Chart */}
+        <Grid item xs={12} md={6}>
+          <Card 
+            elevation={0} 
+            sx={{ 
+              p: 1,
+              borderRadius: '16px',
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
+              ...patternBg
+            }}
+          >
+            <CardHeader 
+              title={
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
+                    }}
+                  >
+                    Video Progression
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <TextField
+                      type="date"
+                      size="small"
+                      value={videoStartDate}
+                      onChange={(e) => setVideoStartDate(e.target.value)}
+                      sx={{ 
+                        width: 120,
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px',
+                          height: '32px'
+                        }
+                      }}
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
+                      placeholder="Start"
+                    />
+                    <TextField
+                      type="date"
+                      size="small"
+                      value={videoEndDate}
+                      onChange={(e) => setVideoEndDate(e.target.value)}
+                      sx={{ 
+                        width: 120,
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px',
+                          height: '32px'
+                        }
+                      }}
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
+                      placeholder="End"
+                    />
+                    <IconButton size="small">
+                      <VideoLibraryIcon />
+                    </IconButton>
+                  </Box>
+                </Box>
+              }
+              sx={{ pb: 0 }}
+            />
+            <CardContent>
+              {videoLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+                  <CircularProgress size={40} sx={{ color: COLORS.primary }} />
+                </Box>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart
+                    data={(() => {
+                      const dataSource = videoData || dashboardData
+                      if (!dataSource?.videoHistory && !dataSource?.history) {
+                        return [{ name: 'No Data', sent: 0, responses: 0, validations: 0 }]
+                      }
+                      
+                      const historyData = dataSource.history || dataSource.videoHistory || []
+                      return historyData
+                        .slice(0, 10)
+                        .reverse()
+                        .map((item) => ({
+                          name: new Date(item.metric_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                          sent: item.total_videos_sent || 0,
+                          responses: item.total_video_responses_received || 0,
+                          validations: item.total_validations_sent || 0,
+                          completionRate: item.total_videos_sent > 0 ? ((item.total_video_responses_received || 0) / item.total_videos_sent * 100).toFixed(1) : 0
+                        }))
+                    })()}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(85, 65, 93, 0.1)'} />
+                    <XAxis 
+                      dataKey="name" 
+                      stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
+                      tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
+                    />
+                    <YAxis 
+                      stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
+                      tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: theme.palette.mode === 'dark' ? '#312A3A' : '#FFFFFF',
+                        borderColor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.2)' : 'rgba(85, 65, 93, 0.2)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+                      }}
+                      labelStyle={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary, fontWeight: 600 }}
+                      formatter={(value, name) => {
+                        if (name === 'completionRate') return [`${value}%`, 'Completion Rate']
+                        return [value, name]
+                      }}
+                    />
+                    <Legend />
+                    <Area 
+                      type="monotone" 
+                      dataKey="sent" 
+                      stackId="1"
+                      stroke={COLORS.primary} 
+                      fill="url(#colorVideoSent)" 
+                      name="Videos Sent"
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="responses" 
+                      stackId="2"
+                      stroke={COLORS.success} 
+                      fill="url(#colorVideoResponses)" 
+                      name="Video Responses"
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="validations" 
+                      stackId="3"
+                      stroke={COLORS.secondary} 
+                      fill="url(#colorVideoValidations)" 
+                      name="Validations"
+                    />
+                    <defs>
+                      <linearGradient id="colorVideoSent" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0.05}/>
+                      </linearGradient>
+                      <linearGradient id="colorVideoResponses" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={COLORS.success} stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor={COLORS.success} stopOpacity={0.05}/>
+                      </linearGradient>
+                      <linearGradient id="colorVideoValidations" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={COLORS.secondary} stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor={COLORS.secondary} stopOpacity={0.05}/>
+                      </linearGradient>
+                    </defs>
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        {/* Video Completion Rate Gauge */}
+        <Grid item xs={12} md={4}>
+          <Card 
+            elevation={0} 
+            sx={{ 
+              p: 1,
+              borderRadius: '16px',
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
+              height: '100%',
+              ...patternBg
+            }}
+          >
+            <CardHeader 
+              title={
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 600, 
+                    color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
+                  }}
+                >
+                  Video Completion Rate
+                </Typography>
+              }
+              action={
+                <IconButton>
+                  <PlayCircleIcon />
+                </IconButton>
+              }
+              sx={{ pb: 0 }}
+            />
+            <CardContent sx={{ textAlign: 'center' }}>
+              {(() => {
+                const dataSource = videoData || dashboardData
+                const videoSent = dataSource?.video?.total_videos_sent || dataSource?.metrics?.total_videos_sent || 0
+                const videoResponses = dataSource?.video?.total_video_responses_received || dataSource?.metrics?.total_video_responses_received || 0
+                const videoValidations = dataSource?.video?.total_validations_sent || dataSource?.metrics?.total_validations_sent || 0
+                const completionRate = videoSent > 0 ? (videoResponses / videoSent * 100) : 0
+                
+                return (
+                  <>
+                    <Box sx={{ position: 'relative', display: 'inline-flex', mb: 3 }}>
+                      <Box
+                        sx={{
+                          width: 120,
+                          height: 120,
+                          borderRadius: '50%',
+                          background: `conic-gradient(${COLORS.success} ${completionRate * 3.6}deg, ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'} 0deg)`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative'
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 90,
+                            height: 90,
+                            borderRadius: '50%',
+                            backgroundColor: theme.palette.mode === 'dark' ? '#1a1a1a' : '#ffffff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexDirection: 'column'
+                          }}
+                        >
+                          <Typography variant="h4" sx={{ fontWeight: 700, color: COLORS.success }}>
+                            {completionRate.toFixed(1)}%
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                    
+                    <Stack spacing={2}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary, opacity: 0.7 }}>
+                          Videos Sent:
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }}>
+                          {videoSent.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary, opacity: 0.7 }}>
+                          Responses:
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }}>
+                          {videoResponses.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary, opacity: 0.7 }}>
+                          Validations:
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary }}>
+                          {videoValidations.toLocaleString()}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </>
+                )
+              })()}
+            </CardContent>
+          </Card>
+        </Grid>
+
         {/* Engagement Metrics Chart */}
         <Grid item xs={12} md={8}>
           <Card 
@@ -775,7 +912,25 @@ const Dashboard = () => {
             <CardContent>
               <ResponsiveContainer width="100%" height={320}>
                 <AreaChart
-                  data={engagementData}
+                  data={(() => {
+                    // Transform historical KPI data for engagement chart
+                    if (!dashboardData?.kpiHistory || dashboardData.kpiHistory.length === 0) {
+                      // Fallback data if no historical data
+                      return [
+                        { name: 'No Data', messages: 0, dau: 0 }
+                      ]
+                    }
+                    
+                    return dashboardData.kpiHistory
+                      .slice(0, 7) // Last 7 data points
+                      .reverse() // Show chronologically
+                      .map((item, index) => ({
+                        name: new Date(item.metric_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                        messages: item.total_wh_messages || 0,
+                        dau: item.dau || 0,
+                        activeUsers: item.active_users_30d || 0
+                      }))
+                  })()}
                   margin={{
                     top: 5,
                     right: 30,
@@ -810,22 +965,22 @@ const Dashboard = () => {
                     stroke={COLORS.primary} 
                     fill="url(#colorMessages)" 
                     activeDot={{ r: 8 }} 
-                    name="Messages Sent"
+                    name="WhatsApp Messages"
                   />
                   <Area 
                     type="monotone" 
-                    dataKey="replies" 
+                    dataKey="dau" 
                     stackId="2"
                     stroke={COLORS.lilac} 
-                    fill="url(#colorReplies)" 
-                    name="Replies Received"
+                    fill="url(#colorDAU)" 
+                    name="Daily Active Users"
                   />
                   <defs>
                     <linearGradient id="colorMessages" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.3}/>
                       <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0.05}/>
                     </linearGradient>
-                    <linearGradient id="colorReplies" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="colorDAU" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={COLORS.lilac} stopOpacity={0.3}/>
                       <stop offset="95%" stopColor={COLORS.lilac} stopOpacity={0.05}/>
                     </linearGradient>
@@ -1157,7 +1312,101 @@ const Dashboard = () => {
           </Card>
         </Grid>
         
-        {/* Recent Activity */}
+        {/* Click Metrics */}
+        <Grid item xs={12} md={4}>
+          <Card 
+            elevation={0} 
+            sx={{ 
+              borderRadius: '16px',
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
+              height: '100%',
+              ...patternBg
+            }}
+          >
+            <CardHeader 
+              title={
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 600, 
+                    color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
+                  }}
+                >
+                  Top Clicked Features
+                </Typography>
+              }
+              action={
+                <IconButton>
+                  <TouchAppIcon />
+                </IconButton>
+              }
+            />
+            <CardContent sx={{ pt: 0 }}>
+              {dashboardData?.click?.clicks ? (
+                <>
+                  {getTopClicks(dashboardData.click.clicks, 8).map((click, index) => (
+                    <Box key={click.name} sx={{ mb: index < 7 ? 3 : 0 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontWeight: 600, 
+                            color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary,
+                            fontSize: '0.85rem'
+                          }}
+                        >
+                          {click.name}
+                        </Typography>
+                        <Chip 
+                          label={click.value} 
+                          size="small"
+                          sx={{ 
+                            bgcolor: index === 0 ? 'rgba(249, 213, 139, 0.2)' : theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.1)',
+                            color: index === 0 ? COLORS.secondary : theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
+                            fontWeight: 600,
+                            minWidth: '40px'
+                          }}
+                        />
+                      </Box>
+                      <Box 
+                        sx={{ 
+                          height: 4, 
+                          width: '100%', 
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.1)',
+                          borderRadius: 2,
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <Box 
+                          sx={{ 
+                            height: '100%', 
+                            width: `${Math.min((click.value / Math.max(...getTopClicks(dashboardData.click.clicks, 8).map(c => c.value))) * 100, 100)}%`, 
+                            bgcolor: index === 0 ? COLORS.secondary : COLORS.chartColors[index % COLORS.chartColors.length],
+                            borderRadius: 2
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  ))}
+                </>
+              ) : (
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
+                    opacity: 0.7,
+                    textAlign: 'center',
+                    py: 4
+                  }}
+                >
+                  No click data available
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        {/* Indigenous Learning Patterns */}
         <Grid item xs={12} md={4}>
           <Card 
             elevation={0} 
@@ -1255,6 +1504,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </Grid>
+        
       </Grid>
     </Box>
   )
