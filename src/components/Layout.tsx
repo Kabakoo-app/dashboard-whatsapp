@@ -12,7 +12,6 @@ import {
   ListItemButton, 
   ListItemIcon, 
   ListItemText,
-  Divider,
   useMediaQuery,
   useTheme,
   Avatar,
@@ -20,7 +19,6 @@ import {
   Paper
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import PeopleIcon from '@mui/icons-material/People'
 import SupportIcon from '@mui/icons-material/Support'
@@ -29,11 +27,13 @@ import BarChartIcon from '@mui/icons-material/BarChart'
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows'
 import Brightness4Icon from '@mui/icons-material/Brightness4'
 import Brightness7Icon from '@mui/icons-material/Brightness7'
+import LogoutIcon from '@mui/icons-material/Logout'
 
 const drawerWidth = 280
 
 // Import our custom Kabakoo logo component
 import KabakooLogo from './KabakooLogo'
+import { useAuth } from '../context/AuthContext'
 
 interface LayoutProps {
   toggleDarkMode: () => void
@@ -46,6 +46,12 @@ const Layout = ({ toggleDarkMode, darkMode }: LayoutProps) => {
   const location = useLocation()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [open, setOpen] = useState(!isMobile)
+  const { logout } = useAuth()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
 
   const handleDrawerToggle = () => {
     setOpen(!open)
@@ -137,6 +143,9 @@ const Layout = ({ toggleDarkMode, darkMode }: LayoutProps) => {
             <IconButton color="inherit" onClick={toggleDarkMode} sx={{ ml: 1 }}>
               {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
             </IconButton>
+            <IconButton color="inherit" onClick={handleLogout} sx={{ ml: 1 }}>
+              <LogoutIcon />
+            </IconButton>
             <Avatar 
               sx={{ 
                 width: 38, 
@@ -147,7 +156,7 @@ const Layout = ({ toggleDarkMode, darkMode }: LayoutProps) => {
                 fontWeight: 600
               }}
             >
-              KD
+              AD
             </Avatar>
           </Box>
         </Toolbar>

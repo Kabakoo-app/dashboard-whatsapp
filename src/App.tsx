@@ -11,6 +11,9 @@ import ABTestingConfig from './pages/ABTestingConfig'
 import ContentManagement from './pages/ContentManagement'
 import SupportFeedback from './pages/SupportFeedback'
 import Layout from './components/Layout'
+import Login from './pages/Login'
+import ProtectedRoute from './components/ProtectedRoute'
+import { AuthProvider } from './context/AuthContext'
 
 function App() {
   const [darkMode, setDarkMode] = useState(false)
@@ -124,9 +127,19 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <BrowserRouter>
-        <Box sx={{ display: 'flex' }}>
+        <AuthProvider>
           <Routes>
-            <Route path="/" element={<Layout toggleDarkMode={toggleDarkMode} darkMode={darkMode} />}>
+            <Route path="/login" element={<Login />} />
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute>
+                  <Box sx={{ display: 'flex' }}>
+                    <Layout toggleDarkMode={toggleDarkMode} darkMode={darkMode} />
+                  </Box>
+                </ProtectedRoute>
+              }
+            >
               <Route index element={<Dashboard />} />
               <Route path="user-journey" element={<UserJourney />} />
               <Route path="support" element={<SupportFeedback />} />
@@ -135,7 +148,7 @@ function App() {
               <Route path="ab-testing" element={<ABTestingConfig />} />
             </Route>
           </Routes>
-        </Box>
+        </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>
   )
