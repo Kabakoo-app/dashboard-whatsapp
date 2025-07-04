@@ -191,11 +191,16 @@ export const fetchVisitMetrics = async (date?: string): Promise<VisitApiResponse
   }
 }
 
-export const fetchWorkshopMetrics = async (date?: string): Promise<WorkshopApiResponse> => {
+export const fetchWorkshopMetrics = async (startDate?: string, endDate?: string): Promise<WorkshopApiResponse> => {
   try {
-    const url = date 
-      ? `${API_BASE_URL}/api/workshop?date=${date}`
-      : `${API_BASE_URL}/api/workshop`
+    let url = `${API_BASE_URL}/api/workshop`
+    
+    if (startDate && endDate) {
+      url += `?start_date=${startDate}&end_date=${endDate}`
+    } else if (startDate) {
+      // Fallback for backward compatibility with single date
+      url += `?date=${startDate}`
+    }
     
     const response = await fetch(url)
     
@@ -285,7 +290,13 @@ export const fetchDashboardAnalytics = async (date?: string): Promise<DashboardD
   }
 }
 
-export const fetchExtendedDashboardAnalytics = async (date?: string, startDate?: string, endDate?: string): Promise<DashboardData> => {
+export const fetchExtendedDashboardAnalytics = async (
+  date?: string, 
+  videoStartDate?: string, 
+  videoEndDate?: string,
+  workshopStartDate?: string,
+  workshopEndDate?: string
+): Promise<DashboardData> => {
   try {
     const [kpiData, visitData, clickData] = await Promise.all([
       fetchKpiMetrics(date),
@@ -296,12 +307,19 @@ export const fetchExtendedDashboardAnalytics = async (date?: string, startDate?:
     let workshopData: WorkshopApiResponse | undefined
     let videoData: VideoApiResponse | undefined
     
-    if (date) {
+    // Fetch workshop data with date range
+    if (workshopStartDate && workshopEndDate) {
+      workshopData = await fetchWorkshopMetrics(workshopStartDate, workshopEndDate)
+    } else if (date) {
+      // Fallback to general date filter
       workshopData = await fetchWorkshopMetrics(date)
+    } else {
+      workshopData = await fetchWorkshopMetrics()
     }
     
-    if (startDate && endDate) {
-      videoData = await fetchVideoMetrics(startDate, endDate)
+    // Fetch video data with date range
+    if (videoStartDate && videoEndDate) {
+      videoData = await fetchVideoMetrics(videoStartDate, videoEndDate)
     } else {
       videoData = await fetchVideoMetrics()
     }

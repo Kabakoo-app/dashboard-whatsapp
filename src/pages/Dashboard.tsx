@@ -125,7 +125,8 @@ const Dashboard = () => {
   const theme = useTheme()
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [showAllCards, setShowAllCards] = useState(false)
-  const [workshopDate, setWorkshopDate] = useState<string>('')
+  const [workshopStartDate, setWorkshopStartDate] = useState<string>('')
+  const [workshopEndDate, setWorkshopEndDate] = useState<string>('')
   const [videoStartDate, setVideoStartDate] = useState<string>('')
   const [videoEndDate, setVideoEndDate] = useState<string>('')
   const [workshopData, setWorkshopData] = useState<any>(null)
@@ -134,12 +135,12 @@ const Dashboard = () => {
   const [videoLoading, setVideoLoading] = useState(false)
   const { data: dashboardData, loading, error, refetchExtended } = useDashboardData(selectedDate)
   
-  // Fetch workshop data when workshop date changes
+  // Fetch workshop data when workshop dates change
   useEffect(() => {
     const fetchWorkshopData = async () => {
       try {
         setWorkshopLoading(true)
-        const data = await fetchWorkshopMetrics(workshopDate)
+        const data = await fetchWorkshopMetrics(workshopStartDate, workshopEndDate)
         setWorkshopData(data)
       } catch (error) {
         console.error('Error fetching workshop data:', error)
@@ -149,7 +150,7 @@ const Dashboard = () => {
     }
     
     fetchWorkshopData()
-  }, [workshopDate])
+  }, [workshopStartDate, workshopEndDate])
   
   // Fetch video data when video dates change
   useEffect(() => {
@@ -177,7 +178,7 @@ const Dashboard = () => {
   }
   
   return (
-    <Box sx={{ flexGrow: 1 }}>
+    <Box sx={{ flexGrow: 1, width: '100%', maxWidth: '100%' }}>
       <Box sx={{ 
         mb: 3, 
         display: 'flex',
@@ -395,9 +396,16 @@ const Dashboard = () => {
         const additionalRow2 = cardsData.slice(8, 12)
         
         const renderCards = (cards, rowKey) => (
-          <Grid container spacing={3} sx={{ mb: 4 }} key={rowKey}>
+          <Grid container
+          sx={{
+            mb: 4,
+            display: 'grid',
+            gap: '10px',
+            gridTemplateColumns: 'auto auto auto auto',
+          }}
+          spacing={3} key={rowKey}>
             {cards.map((card, index) => (
-              <Grid item key={index} xs={3}>
+              <Grid item key={index} xs={12} sm={6} md={3}>
                 <Paper
                   elevation={0}
                   sx={{
@@ -406,34 +414,38 @@ const Dashboard = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     width: '100%',
-                    height: 180,
+                    minHeight: 180,
+                    maxHeight: 180,
                     borderRadius: '16px',
                     position: 'relative',
                     overflow: 'hidden',
                     border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
+                    boxSizing: 'border-box',
                     '&::before': {
                       content: '""',
                       position: 'absolute',
                       top: 0,
                       left: 0,
-                      width: '100%',
+                      right: 0,
                       height: '4px',
                       backgroundColor: card.color,
                       opacity: 0.7
                     }
                   }}
                 >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, minHeight: 40 }}>
                     <Avatar
                       sx={{
                         bgcolor: `${card.color}33`,
-                        color: card.color
+                        color: card.color,
+                        width: 40,
+                        height: 40
                       }}
                     >
                       {card.icon}
                     </Avatar>
                     {card.trend && card.trend.percentage > 0 && (
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                         {card.trend.isPositive ? (
                           <TrendingUpIcon sx={{ color: COLORS.success, fontSize: '1rem', mr: 0.5 }} />
                         ) : (
@@ -441,26 +453,41 @@ const Dashboard = () => {
                         )}
                         <Typography variant="body2" sx={{ 
                           color: card.trend.isPositive ? COLORS.success : COLORS.error, 
-                          fontWeight: 600 
+                          fontWeight: 600,
+                          fontSize: '0.75rem'
                         }}>
                           {card.trend.percentage.toFixed(1)}%
                         </Typography>
                       </Box>
                     )}
                   </Box>
-                  <Typography variant={rowKey === 'main' ? 'h3' : 'h4'} sx={{
-                    fontWeight: 700,
-                    mb: 1,
-                    color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary
-                  }}>
-                    {card.value}
-                  </Typography>
-                  <Typography variant="body2" sx={{
-                    color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
-                    opacity: 0.7
-                  }}>
-                    {card.label}
-                  </Typography>
+                  <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <Typography variant={rowKey === 'main' ? 'h3' : 'h4'} sx={{
+                      fontWeight: 700,
+                      mb: 1,
+                      color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary,
+                      fontSize: rowKey === 'main' ? '2rem' : '1.5rem',
+                      lineHeight: 1.2,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {card.value}
+                    </Typography>
+                    <Typography variant="body2" sx={{
+                      color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
+                      opacity: 0.7,
+                      fontSize: '0.875rem',
+                      lineHeight: 1.3,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical'
+                    }}>
+                      {card.label}
+                    </Typography>
+                  </Box>
                 </Paper>
               </Grid>
             ))}
@@ -489,127 +516,14 @@ const Dashboard = () => {
             px: 3
           }}
         >
-{showAllCards ? 'Show Less' : 'Show All Metrics'}
+        {showAllCards ? 'Show Less' : 'Show All Metrics'}
         </Button>
       </Box>
       
       {/* Charts Section */}
-      <Grid container spacing={3}>
-        {/* Workshop Progression Chart */}
-        <Grid item xs={12} md={6}>
-          <Card 
-            elevation={0} 
-            sx={{ 
-              p: 1,
-              borderRadius: '16px',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
-              ...patternBg
-            }}
-          >
-            <CardHeader 
-              title={
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontWeight: 600, 
-                      color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
-                    }}
-                  >
-                    Workshop Progression
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    <TextField
-                      type="date"
-                      size="small"
-                      value={workshopDate}
-                      onChange={(e) => setWorkshopDate(e.target.value)}
-                      sx={{ 
-                        width: 140,
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: '8px',
-                          height: '32px'
-                        }
-                      }}
-                      InputLabelProps={{
-                        shrink: true,
-                      }}
-                      placeholder="Workshop Date"
-                    />
-                    <IconButton size="small">
-                      <EventIcon />
-                    </IconButton>
-                  </Box>
-                </Box>
-              }
-              sx={{ pb: 0 }}
-            />
-            <CardContent>
-              {workshopLoading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
-                  <CircularProgress size={40} sx={{ color: COLORS.primary }} />
-                </Box>
-              ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart
-                    data={(() => {
-                      const dataSource = workshopData || dashboardData
-                      if (!dataSource?.workshopHistory && !dataSource?.history) {
-                        return [{ name: 'No Data', attendees: 0, workshops: 0, unique: 0 }]
-                      }
-                      
-                      const historyData = dataSource.history || dataSource.workshopHistory || []
-                      return historyData
-                        .slice(0, 10)
-                        .reverse()
-                        .map((item) => ({
-                          name: new Date(item.metric_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                          attendees: item.total_workshop_attendees || 0,
-                          workshops: item.nb_workshop || 0,
-                          unique: item.unique_workshop_attendees || 0
-                        }))
-                    })()}
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(85, 65, 93, 0.1)'} />
-                    <XAxis 
-                      dataKey="name" 
-                      stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
-                      tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
-                    />
-                    <YAxis 
-                      stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
-                      tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: theme.palette.mode === 'dark' ? '#312A3A' : '#FFFFFF',
-                        borderColor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.2)' : 'rgba(85, 65, 93, 0.2)',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
-                      }}
-                      labelStyle={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary, fontWeight: 600 }}
-                    />
-                    <Legend />
-                    <Bar 
-                      dataKey="attendees" 
-                      fill={COLORS.lilac} 
-                      name="Total Attendees"
-                      radius={[4, 4, 0, 0]}
-                    />
-                    <Bar 
-                      dataKey="unique" 
-                      fill={COLORS.secondary} 
-                      name="Unique Attendees"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-        
+      <Grid container  spacing={3} sx={{ mb: 4, display: 'grid',
+            gap: '10px',
+            gridTemplateColumns: 'auto 30%', }}>
         {/* Video Progression Chart */}
         <Grid item xs={12} md={6}>
           <Card 
@@ -878,134 +792,22 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </Grid>
-
+       </Grid>
+       <Grid container  spacing={3} sx={{ mb: 4, display: 'grid',
+            gap: '10px',
+            gridTemplateColumns: 'auto 30%' }}>
         {/* Engagement Metrics Chart */}
-        <Grid item xs={12} md={8}>
-          <Card 
-            elevation={0} 
-            sx={{ 
-              p: 1,
-              borderRadius: '16px',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
-              ...patternBg
-            }}
-          >
-            <CardHeader 
-              title={
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    fontWeight: 600, 
-                    color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
-                  }}
-                >
-                  Engagement Metrics
-                </Typography>
-              }
-              action={
-                <IconButton>
-                  <MoreVertIcon />
-                </IconButton>
-              }
-              sx={{ pb: 0 }}
-            />
-            <CardContent>
-              <ResponsiveContainer width="100%" height={320}>
-                <AreaChart
-                  data={(() => {
-                    // Transform historical KPI data for engagement chart
-                    if (!dashboardData?.kpiHistory || dashboardData.kpiHistory.length === 0) {
-                      // Fallback data if no historical data
-                      return [
-                        { name: 'No Data', messages: 0, dau: 0 }
-                      ]
-                    }
-                    
-                    return dashboardData.kpiHistory
-                      .slice(0, 7) // Last 7 data points
-                      .reverse() // Show chronologically
-                      .map((item, index) => ({
-                        name: new Date(item.metric_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                        messages: item.total_wh_messages || 0,
-                        dau: item.dau || 0,
-                        activeUsers: item.active_users_30d || 0
-                      }))
-                  })()}
-                  margin={{
-                    top: 5,
-                    right: 30,
-                    left: 20,
-                    bottom: 5,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(85, 65, 93, 0.1)'} />
-                  <XAxis 
-                    dataKey="name" 
-                    stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
-                    tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
-                  />
-                  <YAxis 
-                    stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
-                    tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: theme.palette.mode === 'dark' ? '#312A3A' : '#FFFFFF',
-                      borderColor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.2)' : 'rgba(85, 65, 93, 0.2)',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
-                    }}
-                    labelStyle={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary, fontWeight: 600 }}
-                  />
-                  <Legend />
-                  <Area 
-                    type="monotone" 
-                    dataKey="messages" 
-                    stackId="1"
-                    stroke={COLORS.primary} 
-                    fill="url(#colorMessages)" 
-                    activeDot={{ r: 8 }} 
-                    name="WhatsApp Messages"
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="dau" 
-                    stackId="2"
-                    stroke={COLORS.lilac} 
-                    fill="url(#colorDAU)" 
-                    name="Daily Active Users"
-                  />
-                  <defs>
-                    <linearGradient id="colorMessages" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0.05}/>
-                    </linearGradient>
-                    <linearGradient id="colorDAU" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={COLORS.lilac} stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor={COLORS.lilac} stopOpacity={0.05}/>
-                    </linearGradient>
-                  </defs>
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </Grid>
-        
-        {/* Dropout Points Chart */}
-        <Grid item xs={12} md={4}>
-          <Card 
-            elevation={0} 
-            sx={{ 
-              p: 1,
-              height: '100%',
-              borderRadius: '16px',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
-              ...patternBg
-            }}
-          >
-            <CardHeader 
-              title={
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Grid item xs={12} md={8}>
+            <Card 
+              elevation={0} 
+              sx={{ 
+                p: 1,
+                borderRadius: '16px',
+                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
+                ...patternBg
+              }}>
+              <CardHeader 
+                title={
                   <Typography 
                     variant="h6" 
                     sx={{ 
@@ -1013,69 +815,238 @@ const Dashboard = () => {
                       color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
                     }}
                   >
-                    Dropout Points
+                    WhatsApp Engagement & Daily Active Users
                   </Typography>
-                  <IconButton size="small" sx={{ ml: 1 }}>
-                    <InfoOutlinedIcon fontSize="small" />
+                }
+                action={
+                  <IconButton>
+                    <MoreVertIcon />
                   </IconButton>
-                </Box>
-              }
-              action={
-                <IconButton>
-                  <MoreVertIcon />
-                </IconButton>
-              }
-              sx={{ pb: 0 }}
-            />
-            <CardContent>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart
-                  data={dropoutData}
-                  margin={{
-                    top: 5,
-                    right: 10,
-                    left: 0,
-                    bottom: 5,
-                  }}
-                  barSize={30}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(85, 65, 93, 0.1)'} />
-                  <XAxis 
-                    dataKey="name" 
-                    stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
-                    tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
-                  />
-                  <YAxis 
-                    stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
-                    tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: theme.palette.mode === 'dark' ? '#312A3A' : '#FFFFFF',
-                      borderColor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.2)' : 'rgba(85, 65, 93, 0.2)',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+                }
+                sx={{ pb: 0 }}
+              />
+              <CardContent>
+                <ResponsiveContainer width="100%" height={320}>
+                  <AreaChart
+                    data={(() => {
+                      // Transform historical KPI data for engagement chart
+                      if (!dashboardData?.kpiHistory || dashboardData.kpiHistory.length === 0) {
+                        // Fallback data if no historical data
+                        return [
+                          { name: 'No Data', messages: 0, dau: 0 }
+                        ]
+                      }
+                      
+                      return dashboardData.kpiHistory
+                        .slice(0, 7) // Last 7 data points
+                        .reverse() // Show chronologically
+                        .map((item) => ({
+                          name: new Date(item.metric_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                          messages: item.total_wh_messages || 0,
+                          dau: item.dau || 0,
+                          activeUsers: item.active_users_30d || 0,
+                          totalClicks: dashboardData?.click?.clicks ? Object.values(dashboardData.click.clicks).reduce((a, b) => a + b, 0) : 0
+                        }))
+                    })()}
+                    margin={{
+                      top: 5,
+                      right: 30,
+                      left: 20,
+                      bottom: 5,
                     }}
-                    labelStyle={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary, fontWeight: 600 }}
-                    formatter={(value) => [`${value}%`, 'Dropout Rate']}
-                  />
-                  <Bar 
-                    dataKey="value" 
-                    background={{ fill: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.05)' : 'rgba(195, 165, 199, 0.1)' }}
-                    radius={[4, 4, 0, 0]}
                   >
-                    {dropoutData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </Grid>
-        
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(85, 65, 93, 0.1)'} />
+                    <XAxis 
+                      dataKey="name" 
+                      stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
+                      tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
+                    />
+                    <YAxis 
+                      stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
+                      tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: theme.palette.mode === 'dark' ? '#312A3A' : '#FFFFFF',
+                        borderColor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.2)' : 'rgba(85, 65, 93, 0.2)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+                      }}
+                      labelStyle={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary, fontWeight: 600 }}
+                    />
+                    <Legend />
+                    <Area 
+                      type="monotone" 
+                      dataKey="messages" 
+                      stackId="1"
+                      stroke={COLORS.primary} 
+                      fill="url(#colorMessages)" 
+                      activeDot={{ r: 8 }} 
+                      name="WhatsApp Messages"
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="dau" 
+                      stackId="2"
+                      stroke={COLORS.lilac} 
+                      fill="url(#colorDAU)" 
+                      name="Daily Active Users"
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="totalClicks" 
+                      stackId="3"
+                      stroke={COLORS.secondary} 
+                      fill="url(#colorClicks)" 
+                      name="Total Clicks"
+                    />
+                    <defs>
+                      <linearGradient id="colorMessages" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0.05}/>
+                      </linearGradient>
+                      <linearGradient id="colorDAU" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={COLORS.lilac} stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor={COLORS.lilac} stopOpacity={0.05}/>
+                      </linearGradient>
+                      <linearGradient id="colorClicks" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={COLORS.secondary} stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor={COLORS.secondary} stopOpacity={0.05}/>
+                      </linearGradient>
+                    </defs>
+                  </AreaChart>
+                </ResponsiveContainer>
+                
+                {/* Top Clicked Features Summary */}
+                <Box sx={{ mt: 3, pt: 2, borderTop: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}` }}>
+                  <Typography 
+                    variant="subtitle2" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary,
+                      mb: 2
+                    }}
+                  >
+                    Top Clicked Features Today
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {dashboardData?.click?.clicks ? (
+                      getTopClicks(dashboardData.click.clicks, 5).map((click, index) => (
+                        <Chip 
+                          key={click.name}
+                          label={`${click.name}: ${click.value}`} 
+                          size="small"
+                          sx={{ 
+                            bgcolor: index === 0 ? 'rgba(249, 213, 139, 0.2)' : theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.1)',
+                            color: index === 0 ? COLORS.secondary : theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
+                            fontWeight: 600
+                          }}
+                        />
+                      ))
+                    ) : (
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
+                          opacity: 0.7
+                        }}
+                      >
+                        No click data available
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        {/* Dropout Points Chart */}
+          <Grid item xs={12} md={4}>
+            <Card 
+              elevation={0} 
+              sx={{ 
+                p: 1,
+                height: '100%',
+                borderRadius: '16px',
+                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
+                ...patternBg
+              }}
+            >
+              <CardHeader 
+                title={
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        fontWeight: 600, 
+                        color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
+                      }}
+                    >
+                      Dropout Points
+                    </Typography>
+                    <IconButton size="small" sx={{ ml: 1 }}>
+                      <InfoOutlinedIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                }
+                action={
+                  <IconButton>
+                    <MoreVertIcon />
+                  </IconButton>
+                }
+                sx={{ pb: 0 }}
+              />
+              <CardContent>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart
+                    data={dropoutData}
+                    margin={{
+                      top: 5,
+                      right: 10,
+                      left: 0,
+                      bottom: 5,
+                    }}
+                    barSize={30}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(85, 65, 93, 0.1)'} />
+                    <XAxis 
+                      dataKey="name" 
+                      stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
+                      tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
+                    />
+                    <YAxis 
+                      stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
+                      tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: theme.palette.mode === 'dark' ? '#312A3A' : '#FFFFFF',
+                        borderColor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.2)' : 'rgba(85, 65, 93, 0.2)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+                      }}
+                      labelStyle={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary, fontWeight: 600 }}
+                      formatter={(value) => [`${value}%`, 'Dropout Rate']}
+                    />
+                    <Bar 
+                      dataKey="value" 
+                      background={{ fill: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.05)' : 'rgba(195, 165, 199, 0.1)' }}
+                      radius={[4, 4, 0, 0]}
+                    >
+                      {dropoutData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+      </Grid>
+      
+      {/* Top Performing Learners and Upcoming Events Row */}
+      <Grid container spacing={3} sx={{ display: 'grid', mb: 4, gap: '10px', gridTemplateColumns: 'auto auto auto' }}>
         {/* Top Performing Users */}
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={6}>
           <Card 
             elevation={0} 
             sx={{ 
@@ -1191,9 +1162,8 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </Grid>
-        
         {/* Upcoming Events */}
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={6}>
           <Card 
             elevation={0} 
             sx={{ 
@@ -1311,12 +1281,12 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </Grid>
-        
-        {/* Click Metrics */}
-        <Grid item xs={12} md={4}>
+          {/* Workshop Progression Chart */}
+        <Grid item xs={12} md={6}>
           <Card 
             elevation={0} 
             sx={{ 
+              p: 1,
               borderRadius: '16px',
               border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
               height: '100%',
@@ -1325,186 +1295,124 @@ const Dashboard = () => {
           >
             <CardHeader 
               title={
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    fontWeight: 600, 
-                    color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
-                  }}
-                >
-                  Top Clicked Features
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
+                    }}
+                  >
+                    Workshop Progression
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <TextField
+                      type="date"
+                      size="small"
+                      value={workshopStartDate}
+                      onChange={(e) => setWorkshopStartDate(e.target.value)}
+                      sx={{ 
+                        width: 120,
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px',
+                          height: '32px'
+                        }
+                      }}
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
+                      placeholder="Start"
+                    />
+                    <TextField
+                      type="date"
+                      size="small"
+                      value={workshopEndDate}
+                      onChange={(e) => setWorkshopEndDate(e.target.value)}
+                      sx={{ 
+                        width: 120,
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px',
+                          height: '32px'
+                        }
+                      }}
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
+                      placeholder="End"
+                    />
+                    <IconButton size="small">
+                      <EventIcon />
+                    </IconButton>
+                  </Box>
+                </Box>
               }
-              action={
-                <IconButton>
-                  <TouchAppIcon />
-                </IconButton>
-              }
+              sx={{ pb: 0 }}
             />
-            <CardContent sx={{ pt: 0 }}>
-              {dashboardData?.click?.clicks ? (
-                <>
-                  {getTopClicks(dashboardData.click.clicks, 8).map((click, index) => (
-                    <Box key={click.name} sx={{ mb: index < 7 ? 3 : 0 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            fontWeight: 600, 
-                            color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary,
-                            fontSize: '0.85rem'
-                          }}
-                        >
-                          {click.name}
-                        </Typography>
-                        <Chip 
-                          label={click.value} 
-                          size="small"
-                          sx={{ 
-                            bgcolor: index === 0 ? 'rgba(249, 213, 139, 0.2)' : theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.1)',
-                            color: index === 0 ? COLORS.secondary : theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
-                            fontWeight: 600,
-                            minWidth: '40px'
-                          }}
-                        />
-                      </Box>
-                      <Box 
-                        sx={{ 
-                          height: 4, 
-                          width: '100%', 
-                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.1)',
-                          borderRadius: 2,
-                          overflow: 'hidden'
-                        }}
-                      >
-                        <Box 
-                          sx={{ 
-                            height: '100%', 
-                            width: `${Math.min((click.value / Math.max(...getTopClicks(dashboardData.click.clicks, 8).map(c => c.value))) * 100, 100)}%`, 
-                            bgcolor: index === 0 ? COLORS.secondary : COLORS.chartColors[index % COLORS.chartColors.length],
-                            borderRadius: 2
-                          }}
-                        />
-                      </Box>
-                    </Box>
-                  ))}
-                </>
+            <CardContent>
+              {workshopLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+                  <CircularProgress size={40} sx={{ color: COLORS.primary }} />
+                </Box>
               ) : (
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
-                    opacity: 0.7,
-                    textAlign: 'center',
-                    py: 4
-                  }}
-                >
-                  No click data available
-                </Typography>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart
+                    data={(() => {
+                      const dataSource = workshopData || dashboardData
+                      if (!dataSource?.workshopHistory && !dataSource?.history) {
+                        return [{ name: 'No Data', attendees: 0, workshops: 0, unique: 0 }]
+                      }
+                      
+                      const historyData = dataSource.history || dataSource.workshopHistory || []
+                      return historyData
+                        .slice(0, 10)
+                        .reverse()
+                        .map((item) => ({
+                          name: new Date(item.metric_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                          attendees: item.total_workshop_attendees || 0,
+                          workshops: item.nb_workshop || 0,
+                          unique: item.unique_workshop_attendees || 0
+                        }))
+                    })()}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(85, 65, 93, 0.1)'} />
+                    <XAxis 
+                      dataKey="name" 
+                      stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
+                      tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
+                    />
+                    <YAxis 
+                      stroke={theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary}
+                      tick={{ fill: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: theme.palette.mode === 'dark' ? '#312A3A' : '#FFFFFF',
+                        borderColor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.2)' : 'rgba(85, 65, 93, 0.2)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+                      }}
+                      labelStyle={{ color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary, fontWeight: 600 }}
+                    />
+                    <Legend />
+                    <Bar 
+                      dataKey="attendees" 
+                      fill={COLORS.lilac} 
+                      name="Total Attendees"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar 
+                      dataKey="unique" 
+                      fill={COLORS.secondary} 
+                      name="Unique Attendees"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
               )}
             </CardContent>
           </Card>
         </Grid>
-        
-        {/* Indigenous Learning Patterns */}
-        <Grid item xs={12} md={4}>
-          <Card 
-            elevation={0} 
-            sx={{ 
-              borderRadius: '16px',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.1)' : 'rgba(195, 165, 199, 0.2)'}`,
-              height: '100%',
-              ...patternBg
-            }}
-          >
-            <CardHeader 
-              title={
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    fontWeight: 600, 
-                    color: theme.palette.mode === 'dark' ? COLORS.cream : COLORS.primary 
-                  }}
-                >
-                  Indigenous Learning Patterns
-                </Typography>
-              }
-              action={
-                <IconButton>
-                  <MoreVertIcon />
-                </IconButton>
-              }
-            />
-            <CardContent sx={{ pt: 0 }}>
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: theme.palette.mode === 'dark' ? COLORS.lilac : COLORS.primary,
-                  opacity: 0.7,
-                  mb: 3
-                }}
-              >
-                Traditional knowledge integration metrics show strong correlation between indigenous learning approaches and student engagement.
-              </Typography>
-              
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: 'Oral Traditions', value: 35, color: COLORS.chartColors[0] },
-                      { name: 'Collaborative Learning', value: 25, color: COLORS.chartColors[1] },
-                      { name: 'Contextual Application', value: 20, color: COLORS.chartColors[2] },
-                      { name: 'Elder Knowledge', value: 15, color: COLORS.chartColors[3] },
-                      { name: 'Other Approaches', value: 5, color: COLORS.chartColors[4] }
-                    ]}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {[...Array(5)].map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS.chartColors[index]} stroke="none" />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: theme.palette.mode === 'dark' ? '#312A3A' : '#FFFFFF',
-                      borderColor: theme.palette.mode === 'dark' ? 'rgba(195, 165, 199, 0.2)' : 'rgba(85, 65, 93, 0.2)',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
-                    }}
-                    formatter={(value) => [`${value}%`, null]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              
-              <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', gap: 1 }}>
-                {[
-                  { name: 'Oral Traditions', color: COLORS.chartColors[0] },
-                  { name: 'Collaborative', color: COLORS.chartColors[1] },
-                  { name: 'Contextual', color: COLORS.chartColors[2] },
-                  { name: 'Elder Knowledge', color: COLORS.chartColors[3] }
-                ].map((item) => (
-                  <Chip 
-                    key={item.name}
-                    label={item.name} 
-                    size="small"
-                    sx={{ 
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(85, 65, 93, 0.2)' : 'rgba(195, 165, 199, 0.1)',
-                      color: item.color,
-                      fontWeight: 500,
-                      border: `1px solid ${item.color}`,
-                      borderOpacity: 0.3
-                    }}
-                  />
-                ))}
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-        
       </Grid>
     </Box>
   )

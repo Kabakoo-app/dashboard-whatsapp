@@ -5,11 +5,10 @@ import './App.css'
 
 // Import components
 import Dashboard from './pages/Dashboard'
-import UserJourney from './pages/UserJourney'
+import Video from './pages/Video'
+import Attendees from './pages/Attendees'
 import Analytics from './pages/Analytics'
-import ABTestingConfig from './pages/ABTestingConfig'
-import ContentManagement from './pages/ContentManagement'
-import SupportFeedback from './pages/SupportFeedback'
+import Cohort from './pages/Cohort'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -141,11 +140,10 @@ function App() {
               }
             >
               <Route index element={<Dashboard />} />
-              <Route path="user-journey" element={<UserJourney />} />
-              <Route path="support" element={<SupportFeedback />} />
-              <Route path="content" element={<ContentManagement />} />
+              <Route path="video" element={<Video />} />
+              <Route path="attendees" element={<Attendees />} />
               <Route path="analytics" element={<Analytics />} />
-              <Route path="ab-testing" element={<ABTestingConfig />} />
+              <Route path="cohort" element={<Cohort />} />
             </Route>
           </Routes>
         </AuthProvider>

@@ -20,11 +20,10 @@ import {
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import DashboardIcon from '@mui/icons-material/Dashboard'
-import PeopleIcon from '@mui/icons-material/People'
-import SupportIcon from '@mui/icons-material/Support'
-import FolderIcon from '@mui/icons-material/Folder'
-import BarChartIcon from '@mui/icons-material/BarChart'
-import CompareArrowsIcon from '@mui/icons-material/CompareArrows'
+import VideoLibraryIcon from '@mui/icons-material/VideoLibrary'
+import GroupIcon from '@mui/icons-material/Group'
+import AnalyticsIcon from '@mui/icons-material/Analytics'
+import TimelineIcon from '@mui/icons-material/Timeline'
 import Brightness4Icon from '@mui/icons-material/Brightness4'
 import Brightness7Icon from '@mui/icons-material/Brightness7'
 import LogoutIcon from '@mui/icons-material/Logout'
@@ -59,11 +58,10 @@ const Layout = ({ toggleDarkMode, darkMode }: LayoutProps) => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-    { text: 'User Journey', icon: <PeopleIcon />, path: '/user-journey' },
-    { text: 'Support & Feedback', icon: <SupportIcon />, path: '/support' },
-    { text: 'Content Management', icon: <FolderIcon />, path: '/content' },
-    { text: 'Analytics', icon: <BarChartIcon />, path: '/analytics' },
-    { text: 'A/B Testing', icon: <CompareArrowsIcon />, path: '/ab-testing' },
+    { text: 'Video', icon: <VideoLibraryIcon />, path: '/video' },
+    { text: 'Attendees', icon: <GroupIcon />, path: '/attendees' },
+    { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
+    { text: 'Cohort', icon: <TimelineIcon />, path: '/cohort' },
   ]
 
   const handleNavigation = (path: string) => {
@@ -83,7 +81,7 @@ const Layout = ({ toggleDarkMode, darkMode }: LayoutProps) => {
   }
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', width: '100%' }}>
       <AppBar 
         position="fixed" 
         sx={{ 
@@ -266,9 +264,13 @@ const Layout = ({ toggleDarkMode, darkMode }: LayoutProps) => {
                   </ListItemIcon>
                   <ListItemText 
                     primary={item.text} 
-                    primaryTypographyProps={{ 
-                      fontWeight: location.pathname === item.path ? 600 : 500,
-                      fontSize: '0.95rem'
+                    slotProps={{
+                      primary: {
+                        sx: {
+                          fontWeight: location.pathname === item.path ? 600 : 500,
+                          fontSize: '0.95rem'
+                        }
+                      }
                     }}
                   />
                   {location.pathname === item.path && (
@@ -337,6 +339,9 @@ const Layout = ({ toggleDarkMode, darkMode }: LayoutProps) => {
         sx={{ 
           flexGrow: 1, 
           p: 3,
+          width: '100%',
+          maxWidth: '100%',
+          overflow: 'hidden',
           background: theme.palette.mode === 'dark' 
             ? 'radial-gradient(circle at 90% 10%, rgba(85, 65, 93, 0.08) 0%, rgba(85, 65, 93, 0) 50%)' 
             : 'radial-gradient(circle at 90% 10%, rgba(195, 165, 199, 0.15) 0%, rgba(195, 165, 199, 0) 50%)',
